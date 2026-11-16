@@ -1,0 +1,28 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Read the timer
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/linux-hardening-aide-check.timer
+      register: __t
+    - name: Timer has our schedule
+      ansible.builtin.assert:
+        that: "(__t.content | b64decode) is search('(?m)^OnCalendar=\\*-\\*-\\* 03:30:00$')"
+        quiet: true
+    - name: Audit again
+      ansible.builtin.include_role:
+        name: "{{ playbook_dir }}/../.."  # noqa: role-name[path]
+      vars:
+        linux_hardening_mode: audit
+        linux_hardening_fail_on_error: false
+        linux_hardening_fi_schedule: "*-*-* 03:30:00"
+    - name: Only the unconsented baseline is left, and it is not fixable
+      ansible.builtin.assert:
+        that:
+          - linux_hardening_fi_findings | length == 1
+          - linux_hardening_fi_findings[0].key is search('^baseline database')
+          - not linux_hardening_fi_findings[0].fixable
+        quiet: true

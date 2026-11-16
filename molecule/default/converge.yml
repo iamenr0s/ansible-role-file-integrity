@@ -1,0 +1,16 @@
+---
+# Containers: package, units and timer. No baseline here (it would scan the container and trust it); the VM
+# scenario builds one for real.
+- name: Converge (remediate)
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Remediate
+      ansible.builtin.include_role:
+        name: "{{ playbook_dir }}/../.."  # noqa: role-name[path]
+      vars:
+        linux_hardening_mode: remediate
+        linux_hardening_confirm_remediation: true
+        linux_hardening_fail_on_error: false
+        linux_hardening_fi_schedule: "*-*-* 03:30:00"

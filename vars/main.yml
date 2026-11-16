@@ -1,0 +1,16 @@
+---
+# Paths are the packages' defaults (database_in / database_out in the shipped configuration).
+__linux_hardening_fi_family:
+  RedHat:
+    packages: [aide]
+    bin: /usr/sbin/aide
+    conf: /etc/aide.conf
+    db: /var/lib/aide/aide.db.gz
+    db_new: /var/lib/aide/aide.db.new.gz
+  Debian:
+    packages: [aide, aide-common]
+    bin: /usr/bin/aide
+    conf: /etc/aide/aide.conf
+    db: /var/lib/aide/aide.db
+    db_new: /var/lib/aide/aide.db.new
+__linux_hardening_fi_unit: linux-hardening-aide-check

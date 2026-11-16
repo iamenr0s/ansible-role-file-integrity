@@ -1,0 +1,34 @@
+---
+- name: Converge (remediate, with a baseline)
+  hosts: all
+  become: true
+  gather_facts: true
+  pre_tasks:
+    # The shipped AIDE configuration watches /tmp and the home directories, where this very Ansible run keeps its
+    # temporary modules, plus volatile runtime files. They would show up as differences minutes later, so the test
+    # excludes them. (A real baseline taken during an Ansible run has the same problem; see the README.)
+    - name: Refresh the package index (Debian family)
+      ansible.builtin.apt:
+        update_cache: true
+      when: ansible_facts['os_family'] == 'Debian'
+    - name: Install AIDE
+      ansible.builtin.package:
+        name: aide
+        state: present
+    - name: Exclude volatile paths
+      ansible.builtin.blockinfile:
+        path: "{{ '/etc/aide.conf' if ansible_facts['os_family'] == 'RedHat' else '/etc/aide/aide.conf' }}"
+        block: |
+          !/tmp
+          !/run
+          !/var/log
+          !/home/vagrant/\.ansible
+          !/root/\.ansible
+  tasks:
+    - name: Remediate
+      ansible.builtin.include_role:
+        name: "{{ playbook_dir }}/../.."  # noqa: role-name[path]
+      vars:
+        linux_hardening_mode: remediate
+        linux_hardening_confirm_remediation: true
+        linux_hardening_fi_init_database: true

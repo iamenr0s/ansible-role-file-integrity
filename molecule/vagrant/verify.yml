@@ -1,0 +1,78 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Clean audit, comparing the machine with the new baseline
+      ansible.builtin.include_role:
+        name: "{{ playbook_dir }}/../.."  # noqa: role-name[path]
+      vars:
+        linux_hardening_mode: audit
+        linux_hardening_fi_run_check: true
+        linux_hardening_fail_on_error: false
+    - name: Nothing differs yet
+      ansible.builtin.assert:
+        that: linux_hardening_fi_findings | length == 0
+        fail_msg: "{{ linux_hardening_fi_findings | to_json }}"
+        quiet: true
+
+    - name: Tamper with a watched file
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        line: 203.0.113.9 tampered.example
+    - name: Audit reports the change, as not fixable
+      ansible.builtin.include_role:
+        name: "{{ playbook_dir }}/../.."  # noqa: role-name[path]
+      vars:
+        linux_hardening_mode: audit
+        linux_hardening_fi_run_check: true
+        linux_hardening_fail_on_error: false
+    - name: Check the finding
+      ansible.builtin.assert:
+        that:
+          - linux_hardening_fi_findings | length == 1
+          - linux_hardening_fi_findings[0].key == 'files match the baseline'
+          - not linux_hardening_fi_findings[0].fixable
+        fail_msg: "{{ linux_hardening_fi_findings | to_json }}"
+        quiet: true
+    - name: The scheduled unit itself fails on the change
+      ansible.builtin.command: systemctl start linux-hardening-aide-check.service  # noqa: command-instead-of-module
+      register: __svc
+      changed_when: false
+      failed_when: __svc.rc == 0
+    - name: Remediating again does not accept the change into the baseline
+      ansible.builtin.include_role:
+        name: "{{ playbook_dir }}/../.."  # noqa: role-name[path]
+      vars:
+        linux_hardening_mode: remediate
+        linux_hardening_confirm_remediation: true
+        linux_hardening_fi_init_database: true
+        linux_hardening_fi_run_check: true
+        linux_hardening_fail_on_error: false
+    - name: Still reported
+      ansible.builtin.assert:
+        that: linux_hardening_fi_findings | map(attribute='key') | list == ['files match the baseline']
+        quiet: true
+    - name: Undo the tampering
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        line: 203.0.113.9 tampered.example
+        state: absent
+
+    - name: Reboot
+      ansible.builtin.reboot:
+        reboot_timeout: 600
+        post_reboot_delay: 45
+        connect_timeout: 30
+    - name: Timer and baseline survive the reboot
+      ansible.builtin.include_role:
+        name: "{{ playbook_dir }}/../.."  # noqa: role-name[path]
+      vars:
+        linux_hardening_mode: audit
+        linux_hardening_fail_on_error: false
+    - name: Clean
+      ansible.builtin.assert:
+        that: linux_hardening_fi_findings | length == 0
+        fail_msg: "{{ linux_hardening_fi_findings | to_json }}"
+        quiet: true

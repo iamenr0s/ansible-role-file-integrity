@@ -1,0 +1,20 @@
+---
+# --- Shared collection variables ---
+linux_hardening_mode: audit                    # audit (read-only) | remediate
+linux_hardening_confirm_remediation: false     # must be true for any change
+linux_hardening_backup: true
+linux_hardening_verify: true
+linux_hardening_fail_on_error: true
+
+# --- file_integrity (AIDE; EL / Fedora / Debian / Ubuntu) ---
+linux_hardening_fi_enabled: true
+
+# The baseline database records the machine as it is NOW and treats that as trusted. Building it on a machine
+# you have not vetted bakes any compromise into the baseline, so it is your call (and a full scan takes minutes).
+linux_hardening_fi_init_database: false
+
+# systemd OnCalendar expression for the scheduled `aide --check`.
+linux_hardening_fi_schedule: daily
+
+# Audit also runs `aide --check` (read-only, but it reads every watched file) and reports differences.
+linux_hardening_fi_run_check: false
