@@ -26,3 +26,21 @@
           - linux_hardening_fi_findings[0].key is search('^baseline database')
           - not linux_hardening_fi_findings[0].fixable
         quiet: true
+
+    - name: Loosen the timer's permissions
+      ansible.builtin.file:
+        path: /etc/systemd/system/linux-hardening-aide-check.timer
+        mode: '0666'
+    - name: Audit after the drift
+      ansible.builtin.include_role:
+        name: "{{ playbook_dir }}/../.."  # noqa: role-name[path]
+      vars:
+        linux_hardening_mode: audit
+        linux_hardening_fail_on_error: false
+        linux_hardening_fi_schedule: "*-*-* 03:30:00"
+    - name: The drifted unit is reported as fixable
+      ansible.builtin.assert:
+        that:
+          - linux_hardening_fi_findings | selectattr('key', 'search', 'aide-check\.timer$') | selectattr('fixable') | list | length == 1
+        fail_msg: "{{ linux_hardening_fi_findings | to_json }}"
+        quiet: true

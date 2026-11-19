@@ -18,12 +18,10 @@
                                              ~ ' set linux_hardening_fi_init_database)'),
                               'fixable': linux_hardening_fi_init_database | bool}) -%}
       {%- endif -%}
-      {%- for r in __lh_fi_files['results'] -%}
-      {%- if r['content'] is not defined or (r['content'] | b64decode) != __lh_fi_units[r['item']['key']] -%}
-      {%- set _ = out.append({'key': 'unit /etc/systemd/system/' ~ r['item']['key'],
+      {%- for r in __lh_fi_units['results'] | selectattr('changed') -%}
+      {%- set _ = out.append({'key': 'unit /etc/systemd/system/' ~ __lh_fi_unit ~ '.' ~ r['item'],
                               'expected': 'present with the desired settings',
                               'actual': 'missing or different', 'fixable': true}) -%}
-      {%- endif -%}
       {%- endfor -%}
       {%- if timer.get('UnitFileState', '') != 'enabled' -%}
       {%- set _ = out.append({'key': 'timer ' ~ __lh_fi_unit ~ ' enabled', 'expected': 'enabled',
@@ -61,8 +59,7 @@
     msg: "file_integrity found {{ __lh_fi_blocking | length }} deviation(s)."
   vars:
     __lh_fi_blocking: >-
-      {{ linux_hardening_fi_findings
-         if (linux_hardening_fail_on_error | bool) and not (__lh_fi_audit_fatal | default(false))
-         else linux_hardening_fi_findings | selectattr('fixable') | list
-         if (__lh_fi_audit_fatal | default(false)) else [] }}
+      {{ linux_hardening_fi_findings | selectattr('fixable') | list
+         if __lh_fi_audit_fatal | default(false)
+         else (linux_hardening_fi_findings if linux_hardening_fail_on_error | bool else []) }}
   when: __lh_fi_blocking | length > 0

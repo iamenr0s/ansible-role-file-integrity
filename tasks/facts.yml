@@ -8,20 +8,17 @@
     __lh_fi_fam: "{{ __lh_fi_family[ansible_facts['os_family']] }}"
     __lh_fi_installed: "{{ 'aide' in ansible_facts['packages'] }}"
 
-- name: facts | Render the units
-  ansible.builtin.set_fact:
-    __lh_fi_units: >-
-      {{ {__lh_fi_unit ~ '.service': lookup('ansible.builtin.template', 'aide-check.service.j2'),
-          __lh_fi_unit ~ '.timer': lookup('ansible.builtin.template', 'aide-check.timer.j2')} }}
-
-- name: facts | Read the installed units
-  ansible.builtin.slurp:
-    src: "/etc/systemd/system/{{ item['key'] }}"
-  loop: "{{ __lh_fi_units | dict2items }}"
-  loop_control:
-    label: "{{ item['key'] }}"
-  register: __lh_fi_files
-  failed_when: false
+# Same arguments as the write in configure.yml; check mode only reports whether it would change (content, owner, mode).
+- name: facts | Compare the units with the templates
+  ansible.builtin.template:
+    src: "aide-check.{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ __lh_fi_unit }}.{{ item }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: [service, timer]
+  check_mode: true
+  register: __lh_fi_units
 
 - name: facts | Stat the baseline database
   ansible.builtin.stat:
