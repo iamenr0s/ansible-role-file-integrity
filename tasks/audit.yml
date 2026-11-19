@@ -26,11 +26,11 @@
       {%- endif -%}
       {%- endfor -%}
       {%- if timer.get('UnitFileState', '') != 'enabled' -%}
-      {%- set _ = out.append({'key': 'timer ' ~ __linux_hardening_fi_unit ~ ' enabled', 'expected': 'enabled',
+      {%- set _ = out.append({'key': 'timer ' ~ __lh_fi_unit ~ ' enabled', 'expected': 'enabled',
                               'actual': timer.get('UnitFileState', 'unknown'), 'fixable': true}) -%}
       {%- endif -%}
       {%- if timer.get('ActiveState') != 'active' -%}
-      {%- set _ = out.append({'key': 'timer ' ~ __linux_hardening_fi_unit ~ ' active', 'expected': 'active',
+      {%- set _ = out.append({'key': 'timer ' ~ __lh_fi_unit ~ ' active', 'expected': 'active',
                               'actual': timer.get('ActiveState', 'unknown'), 'fixable': true}) -%}
       {%- endif -%}
       {%- if __lh_fi_check['rc'] is defined -%}

@@ -1,7 +1,7 @@
 ---
 - name: configure | Install AIDE (Debian family)
   ansible.builtin.apt:
-    name: "{{ __linux_hardening_fi_family['Debian']['packages'] }}"
+    name: "{{ __lh_fi_family['Debian']['packages'] }}"
     state: present
     update_cache: true
     cache_valid_time: 3600
@@ -9,7 +9,7 @@
 
 - name: configure | Install AIDE (RedHat family)
   ansible.builtin.dnf:
-    name: "{{ __linux_hardening_fi_family['RedHat']['packages'] }}"
+    name: "{{ __lh_fi_family['RedHat']['packages'] }}"
     state: present
   when: ansible_facts['os_family'] == 'RedHat'
 
@@ -19,7 +19,7 @@
 - name: configure | Write the check units
   ansible.builtin.template:
     src: "aide-check.{{ item }}.j2"
-    dest: "/etc/systemd/system/{{ __linux_hardening_fi_unit }}.{{ item }}"
+    dest: "/etc/systemd/system/{{ __lh_fi_unit }}.{{ item }}"
     owner: root
     group: root
     mode: '0644'
@@ -35,7 +35,7 @@
 # In check mode a new unit is not written, so systemd cannot find it yet.
 - name: configure | Enable and start the timer
   ansible.builtin.systemd_service:
-    name: "{{ __linux_hardening_fi_unit }}.timer"
+    name: "{{ __lh_fi_unit }}.timer"
     enabled: true
     state: started
   when: not (ansible_check_mode and __lh_fi_written is changed)
