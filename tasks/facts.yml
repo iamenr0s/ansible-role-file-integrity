@@ -16,16 +16,16 @@
 
 - name: facts | Read the installed units
   ansible.builtin.slurp:
-    src: "/etc/systemd/system/{{ item.key }}"
+    src: "/etc/systemd/system/{{ item['key'] }}"
   loop: "{{ __lh_fi_units | dict2items }}"
   loop_control:
-    label: "{{ item.key }}"
+    label: "{{ item['key'] }}"
   register: __lh_fi_files
   failed_when: false
 
 - name: facts | Stat the baseline database
   ansible.builtin.stat:
-    path: "{{ __lh_fi_fam.db }}"
+    path: "{{ __lh_fi_fam['db'] }}"
   register: __lh_fi_db
 
 - name: facts | Query the timer
@@ -37,11 +37,12 @@
 # Can take minutes on a real machine: it reads every file in the configuration. Not async: the state file
 # would show up in the scan.
 - name: facts | Compare the machine with the baseline
-  ansible.builtin.command: "{{ __lh_fi_fam.bin }} --config={{ __lh_fi_fam.conf }} --check"
+  ansible.builtin.command: "{{ __lh_fi_fam['bin'] }} --config={{ __lh_fi_fam['conf'] }} --check"
   register: __lh_fi_check
   changed_when: false
   failed_when: false
+  check_mode: false  # read-only; an audit under --check must still compare
   when:
     - linux_hardening_fi_run_check | bool
     - __lh_fi_installed | bool
-    - __lh_fi_db.stat.exists
+    - __lh_fi_db['stat']['exists']

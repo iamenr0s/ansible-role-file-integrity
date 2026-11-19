@@ -23,15 +23,11 @@ provisioner:
 scenario:
   test_sequence:
     - dependency
-    - cleanup
     - destroy
     - syntax
     - create
-    - prepare
     - check  # converge with --check first: remediate must preview without failing
     - converge
     - idempotence
-    - side_effect
     - verify
-    - cleanup
     - destroy

@@ -6,20 +6,20 @@
   ansible.builtin.set_fact:
     __lh_fi_findings: >-
       {%- set out = [] -%}
-      {%- set timer = __lh_fi_timer.status | default({}) -%}
+      {%- set timer = __lh_fi_timer['status'] | default({}) -%}
       {%- if not __lh_fi_installed -%}
       {%- set _ = out.append({'key': 'package aide', 'expected': 'installed',
                               'actual': 'missing', 'fixable': true}) -%}
       {%- else -%}
-      {%- if not __lh_fi_db.stat.exists -%}
+      {%- if not __lh_fi_db['stat']['exists'] -%}
       {%- set _ = out.append({'key': 'baseline database ' ~ __lh_fi_fam['db'], 'expected': 'present',
                               'actual': 'missing' ~ ('' if linux_hardening_fi_init_database | bool
                                         else ' (reported only: it records the current state as trusted,'
                                              ~ ' set linux_hardening_fi_init_database)'),
                               'fixable': linux_hardening_fi_init_database | bool}) -%}
       {%- endif -%}
-      {%- for r in __lh_fi_files.results -%}
-      {%- if r.content is not defined or (r.content | b64decode) != __lh_fi_units[r.item.key] -%}
+      {%- for r in __lh_fi_files['results'] -%}
+      {%- if r['content'] is not defined or (r['content'] | b64decode) != __lh_fi_units[r['item']['key']] -%}
       {%- set _ = out.append({'key': 'unit /etc/systemd/system/' ~ r['item']['key'],
                               'expected': 'present with the desired settings',
                               'actual': 'missing or different', 'fixable': true}) -%}
@@ -33,15 +33,15 @@
       {%- set _ = out.append({'key': 'timer ' ~ __linux_hardening_fi_unit ~ ' active', 'expected': 'active',
                               'actual': timer.get('ActiveState', 'unknown'), 'fixable': true}) -%}
       {%- endif -%}
-      {%- if __lh_fi_check.rc is defined -%}
-      {%- if 1 <= __lh_fi_check.rc <= 7 -%}
+      {%- if __lh_fi_check['rc'] is defined -%}
+      {%- if 1 <= __lh_fi_check['rc'] <= 7 -%}
       {%- set _ = out.append({'key': 'files match the baseline', 'expected': 'no differences',
-                              'actual': 'aide --check exit ' ~ __lh_fi_check.rc ~ ': files differ'
+                              'actual': 'aide --check exit ' ~ __lh_fi_check['rc'] ~ ': files differ'
                                         ~ ' (reported only: review them, then update the baseline yourself)',
                               'fixable': false}) -%}
-      {%- elif __lh_fi_check.rc != 0 -%}
+      {%- elif __lh_fi_check['rc'] != 0 -%}
       {%- set _ = out.append({'key': 'aide --check runs', 'expected': 'exit 0',
-                              'actual': 'exit ' ~ __lh_fi_check.rc ~ ' (reported only)', 'fixable': false}) -%}
+                              'actual': 'exit ' ~ __lh_fi_check['rc'] ~ ' (reported only)', 'fixable': false}) -%}
       {%- endif -%}
       {%- endif -%}
       {%- endif -%}
