@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for taking the time to contribute to `iamenr0s.ansible_role_file_integrity`!
+Thanks for taking the time to contribute to `iamenr0s.file_integrity`!
 
 ## Getting started
 
