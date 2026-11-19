@@ -22,7 +22,6 @@ provisioner:
     converge: ${MOLECULE_PLAYBOOK:-converge.yml}
 scenario:
   test_sequence:
-    - dependency
     - destroy
     - syntax
     - create
