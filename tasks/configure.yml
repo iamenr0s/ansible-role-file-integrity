@@ -1,5 +1,5 @@
 ---
-- name: Install AIDE (Debian family)
+- name: configure | Install AIDE (Debian family)
   ansible.builtin.apt:
     name: "{{ __linux_hardening_fi_family['Debian'].packages }}"
     state: present
@@ -7,51 +7,54 @@
     cache_valid_time: 3600
   when: ansible_facts['os_family'] == 'Debian'
 
-- name: Install AIDE (RedHat family)
+- name: configure | Install AIDE (RedHat family)
   ansible.builtin.dnf:
     name: "{{ __linux_hardening_fi_family['RedHat'].packages }}"
     state: present
   when: ansible_facts['os_family'] == 'RedHat'
 
-- name: Gather AIDE state
+- name: configure | Gather AIDE state
   ansible.builtin.include_tasks: facts.yml
 
-- name: Write the check units
-  ansible.builtin.copy:
-    content: "{{ item.value }}"
-    dest: "/etc/systemd/system/{{ item.key }}"
+- name: configure | Write the check units
+  ansible.builtin.template:
+    src: "aide-check.{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ __linux_hardening_fi_unit }}.{{ item }}"
     owner: root
     group: root
     mode: '0644'
     backup: "{{ linux_hardening_backup | bool }}"
-  loop: "{{ __lh_fi_units | dict2items }}"
-  loop_control:
-    label: "{{ item.key }}"
+  loop: [service, timer]
   register: __lh_fi_written
 
-- name: Make systemd read the units  # noqa: no-handler
+- name: configure | Make systemd read the units  # noqa: no-handler
   ansible.builtin.systemd_service:
     daemon_reload: true
   when: __lh_fi_written is changed
 
-- name: Enable and start the timer
-  ansible.builtin.systemd:
+# In check mode a new unit is not written, so systemd cannot find it yet.
+- name: configure | Enable and start the timer
+  ansible.builtin.systemd_service:
     name: "{{ __linux_hardening_fi_unit }}.timer"
     enabled: true
     state: started
+  when: not (ansible_check_mode and __lh_fi_written is changed)
 
 # Last, so the baseline already contains the units written above. Never replaces an existing baseline: accepting
 # differences is a human decision. Not async: Ansible's async state file would be scanned into the baseline.
-- name: Build the baseline database
+- name: configure | Build the baseline database
   when:
     - linux_hardening_fi_init_database | bool
-    - not __lh_fi_db.stat.exists
+    - not __lh_fi_db['stat']['exists']
+    - not ansible_check_mode  # the scan writes nothing in check mode, so the copy below would fail
   block:
-    - name: Scan the machine
-      ansible.builtin.command: "{{ __lh_fi_fam.bin }} --config={{ __lh_fi_fam.conf }} --before '!{{ __lh_fi_fam.db_new }}' --init"
+    - name: configure | Scan the machine
+      ansible.builtin.command: >-
+        {{ __lh_fi_fam['bin'] }} --config={{ __lh_fi_fam['conf'] }}
+        --before '!{{ __lh_fi_fam['db_new'] }}' --init
       changed_when: true  # the output file is excluded: it is deleted below and would show as a removed entry
 
-    - name: Install the new database as the baseline
+    - name: configure | Install the new database as the baseline
       ansible.builtin.copy:
         src: "{{ __lh_fi_fam.db_new }}"
         dest: "{{ __lh_fi_fam.db }}"
@@ -60,7 +63,7 @@
         group: root
         mode: '0600'
 
-    - name: Remove the temporary database
+    - name: configure | Remove the temporary database
       ansible.builtin.file:
         path: "{{ __lh_fi_fam.db_new }}"
         state: absent

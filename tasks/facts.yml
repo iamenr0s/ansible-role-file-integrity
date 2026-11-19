@@ -1,20 +1,20 @@
 ---
 # Read-only. Sets the __lh_fi_* facts.
-- name: Gather package facts
+- name: facts | Gather package facts
   ansible.builtin.package_facts:
 
-- name: Pick the family paths and work out what is installed
+- name: facts | Pick the family paths and work out what is installed
   ansible.builtin.set_fact:
     __lh_fi_fam: "{{ __linux_hardening_fi_family[ansible_facts['os_family']] }}"
     __lh_fi_installed: "{{ 'aide' in ansible_facts['packages'] }}"
 
-- name: Render the units
+- name: facts | Render the units
   ansible.builtin.set_fact:
     __lh_fi_units: >-
       {{ {__linux_hardening_fi_unit ~ '.service': lookup('ansible.builtin.template', 'aide-check.service.j2'),
           __linux_hardening_fi_unit ~ '.timer': lookup('ansible.builtin.template', 'aide-check.timer.j2')} }}
 
-- name: Read the installed units
+- name: facts | Read the installed units
   ansible.builtin.slurp:
     src: "/etc/systemd/system/{{ item.key }}"
   loop: "{{ __lh_fi_units | dict2items }}"
@@ -23,20 +23,20 @@
   register: __lh_fi_files
   failed_when: false
 
-- name: Stat the baseline database
+- name: facts | Stat the baseline database
   ansible.builtin.stat:
     path: "{{ __lh_fi_fam.db }}"
   register: __lh_fi_db
 
-- name: Query the timer
-  ansible.builtin.systemd:
+- name: facts | Query the timer
+  ansible.builtin.systemd_service:
     name: "{{ __linux_hardening_fi_unit }}.timer"
   register: __lh_fi_timer
   failed_when: false
 
 # Can take minutes on a real machine: it reads every file in the configuration. Not async: the state file
 # would show up in the scan.
-- name: Compare the machine with the baseline
+- name: facts | Compare the machine with the baseline
   ansible.builtin.command: "{{ __lh_fi_fam.bin }} --config={{ __lh_fi_fam.conf }} --check"
   register: __lh_fi_check
   changed_when: false

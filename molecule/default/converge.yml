@@ -4,7 +4,7 @@
 - name: Converge (remediate)
   hosts: all
   become: true
-  gather_facts: true
+  gather_facts: false  # the role gathers os_family itself
   tasks:
     - name: Remediate
       ansible.builtin.include_role:

@@ -28,7 +28,9 @@ The check unit runs `aide --check`; AIDE exits non-zero when files differ, so th
 Variables use the collection-wide `linux_hardening_*` prefix (shared with sibling roles) rather than `file_integrity_*`. Full list: `defaults/main.yml` and `meta/argument_specs.yml`.
 
 ## Modes
-`audit` (default) is read-only and sets `linux_hardening_fi_findings` (`key, expected, actual, fixable`). `remediate` needs `linux_hardening_confirm_remediation: true`; afterwards only fixable findings fail the run.
+`audit` (default) is read-only and sets `linux_hardening_fi_findings` (`key, expected, actual, fixable`). `remediate` needs `linux_hardening_confirm_remediation: true`; afterwards only fixable findings fail the run. With `--check` it previews the change and skips the re-audit and the baseline build.
+
+Idempotent: true (Molecule checks it). Atomic: false. Works with `gather_facts: false` (it gathers the minimal subset itself).
 
 ## Safety
 - The baseline records the machine **as it is now** and treats that as trusted. Building it on a machine you have not vetted bakes a compromise into the baseline, hence the consent switch. It is built only when no database exists; an existing baseline is never replaced, so the role cannot be used to wave changes through.

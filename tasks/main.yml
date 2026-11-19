@@ -3,6 +3,11 @@
 - name: Run file_integrity
   when: linux_hardening_fi_enabled | bool
   block:
+    - name: Gather the os_family fact (play may set gather_facts false)
+      ansible.builtin.setup:
+        gather_subset: [min]
+      when: "'os_family' not in ansible_facts"
+
     - name: Validate linux_hardening_mode
       ansible.builtin.assert:
         that: linux_hardening_mode in ['audit', 'remediate']
@@ -35,14 +40,18 @@
                 fail_msg: >-
                   Remediation installs AIDE and schedules a daily integrity check (and, with
                   linux_hardening_fi_init_database, records the current machine state as the trusted baseline).
-                  Set linux_hardening_confirm_remediation: true to proceed (run with linux_hardening_mode: audit to preview).
+                  Set linux_hardening_confirm_remediation: true to proceed
+                  (run with linux_hardening_mode: audit to preview).
                 quiet: true
 
             - name: Configure
               ansible.builtin.include_tasks: configure.yml
 
+            # Check mode changes nothing, so a re-audit would only repeat the findings.
             - name: Verify effective configuration
               ansible.builtin.include_tasks: audit.yml
               vars:
                 __lh_fi_audit_fatal: true
-              when: linux_hardening_verify | bool
+              when:
+                - linux_hardening_verify | bool
+                - not ansible_check_mode
