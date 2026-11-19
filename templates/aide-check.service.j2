@@ -1,11 +1,11 @@
 {{ ansible_managed | comment }}
 [Unit]
 Description=AIDE file integrity check
-ConditionPathExists={{ __lh_fi_fam.db }}
+ConditionPathExists={{ __lh_fi_paths.db }}
 
 [Service]
 Type=oneshot
 # aide exits non-zero when files differ from the baseline, so the unit shows as failed.
-ExecStart={{ __lh_fi_fam.bin }} --config={{ __lh_fi_fam.conf }} --check
+ExecStart={{ __lh_fi_paths.bin }} --config={{ __lh_fi_paths.conf }} --check
 Nice=19
 IOSchedulingClass=idle

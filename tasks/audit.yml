@@ -12,7 +12,7 @@
                               'actual': 'missing', 'fixable': true}) -%}
       {%- else -%}
       {%- if not __lh_fi_db['stat']['exists'] -%}
-      {%- set _ = out.append({'key': 'baseline database ' ~ __lh_fi_fam['db'], 'expected': 'present',
+      {%- set _ = out.append({'key': 'baseline database ' ~ __lh_fi_paths['db'], 'expected': 'present',
                               'actual': 'missing' ~ ('' if linux_hardening_fi_init_database | bool
                                         else ' (reported only: it records the current state as trusted,'
                                              ~ ' set linux_hardening_fi_init_database)'),

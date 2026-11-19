@@ -5,7 +5,7 @@
 
 - name: facts | Pick the family paths and work out what is installed
   ansible.builtin.set_fact:
-    __lh_fi_fam: "{{ __lh_fi_family[ansible_facts['os_family']] }}"
+    __lh_fi_paths: "{{ __lh_fi_family[ansible_facts['os_family']] }}"
     __lh_fi_installed: "{{ 'aide' in ansible_facts['packages'] }}"
 
 # Same arguments as the write in configure.yml; check mode only reports whether it would change (content, owner, mode).
@@ -22,7 +22,7 @@
 
 - name: facts | Stat the baseline database
   ansible.builtin.stat:
-    path: "{{ __lh_fi_fam['db'] }}"
+    path: "{{ __lh_fi_paths['db'] }}"
   register: __lh_fi_db
 
 - name: facts | Query the timer
@@ -34,7 +34,7 @@
 # Can take minutes on a real machine: it reads every file in the configuration. Not async: the state file
 # would show up in the scan.
 - name: facts | Compare the machine with the baseline
-  ansible.builtin.command: "{{ __lh_fi_fam['bin'] }} --config={{ __lh_fi_fam['conf'] }} --check"
+  ansible.builtin.command: "{{ __lh_fi_paths['bin'] }} --config={{ __lh_fi_paths['conf'] }} --check"
   register: __lh_fi_check
   changed_when: false
   failed_when: false

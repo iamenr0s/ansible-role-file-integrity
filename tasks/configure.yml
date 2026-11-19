@@ -50,14 +50,14 @@
   block:
     - name: configure | Scan the machine
       ansible.builtin.command: >-
-        {{ __lh_fi_fam['bin'] }} --config={{ __lh_fi_fam['conf'] }}
-        --before '!{{ __lh_fi_fam['db_new'] }}' --init
+        {{ __lh_fi_paths['bin'] }} --config={{ __lh_fi_paths['conf'] }}
+        --before '!{{ __lh_fi_paths['db_new'] }}' --init
       changed_when: true  # the output file is excluded: it is deleted below and would show as a removed entry
 
     - name: configure | Install the new database as the baseline
       ansible.builtin.copy:
-        src: "{{ __lh_fi_fam['db_new'] }}"
-        dest: "{{ __lh_fi_fam['db'] }}"
+        src: "{{ __lh_fi_paths['db_new'] }}"
+        dest: "{{ __lh_fi_paths['db'] }}"
         remote_src: true
         owner: root
         group: root
@@ -65,5 +65,5 @@
 
     - name: configure | Remove the temporary database
       ansible.builtin.file:
-        path: "{{ __lh_fi_fam['db_new'] }}"
+        path: "{{ __lh_fi_paths['db_new'] }}"
         state: absent
