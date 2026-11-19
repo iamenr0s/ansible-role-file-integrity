@@ -3,9 +3,8 @@
 - name: facts | Gather package facts
   ansible.builtin.package_facts:
 
-- name: facts | Pick the family paths and work out what is installed
+- name: facts | Work out whether aide is installed
   ansible.builtin.set_fact:
-    __lh_fi_paths: "{{ __lh_fi_family[ansible_facts['os_family']] }}"
     __lh_fi_installed: "{{ 'aide' in ansible_facts['packages'] }}"
 
 # Same arguments as the write in configure.yml; check mode only reports whether it would change (content, owner, mode).

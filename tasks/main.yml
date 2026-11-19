@@ -27,6 +27,10 @@
     - name: Run on a supported family
       when: ansible_facts['os_family'] in __lh_fi_family
       block:
+        - name: Pick the family's packages and paths
+          ansible.builtin.set_fact:
+            __lh_fi_paths: "{{ __lh_fi_family[ansible_facts['os_family']] }}"
+
         - name: Audit (read-only)
           ansible.builtin.include_tasks: audit.yml
           when: linux_hardening_mode == 'audit'
