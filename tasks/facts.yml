@@ -7,16 +7,11 @@
   ansible.builtin.set_fact:
     __lh_fi_installed: "{{ 'aide' in ansible_facts['packages'] }}"
 
-# Same arguments as the write in configure.yml; check mode only reports whether it would change (content, owner, mode).
-- name: facts | Compare the units with the templates
-  ansible.builtin.template:
-    src: "aide-check.{{ item }}.j2"
-    dest: "/etc/systemd/system/{{ __lh_fi_unit }}.{{ item }}"
-    owner: root
-    group: root
-    mode: '0644'
+# Not the template module in check mode: it would report a change on every audit of a drifted host.
+- name: facts | Stat the units
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/{{ __lh_fi_unit }}.{{ item }}"
   loop: [service, timer]
-  check_mode: true
   register: __lh_fi_units
 
 - name: facts | Stat the baseline database

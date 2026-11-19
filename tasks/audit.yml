@@ -46,9 +46,17 @@
           expected: present with the desired settings
           actual: missing or different
           fixable: true
-      loop: "{{ __lh_fi_units['results'] | selectattr('changed') }}"
+        # What configure.yml writes; combining it over the stat changes the stat only if something differs.
+        __lh_fi_want:
+          exists: true
+          checksum: "{{ lookup('ansible.builtin.template', 'aide-check.' ~ item['item'] ~ '.j2') | hash('sha1') }}"
+          mode: '0644'
+          pw_name: root
+          gr_name: root
+      loop: "{{ __lh_fi_units['results'] }}"
       loop_control:
         label: "{{ item['item'] }}"
+      when: item['stat'] | combine(__lh_fi_want) != item['stat']
 
     - name: audit | Report a timer that is not enabled
       ansible.builtin.set_fact:
