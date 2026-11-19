@@ -1,10 +1,17 @@
 ---
+# Also under --check: without a package index, apt cannot preview the install. Only the package lists change.
+- name: configure | Refresh the package index (Debian family)
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  check_mode: false
+  changed_when: false
+  when: ansible_facts['os_family'] == 'Debian'
+
 - name: configure | Install AIDE (Debian family)
   ansible.builtin.apt:
     name: "{{ __lh_fi_family['Debian']['packages'] }}"
     state: present
-    update_cache: true
-    cache_valid_time: 3600
   when: ansible_facts['os_family'] == 'Debian'
 
 - name: configure | Install AIDE (RedHat family)

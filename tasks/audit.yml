@@ -2,52 +2,108 @@
 - name: audit | Gather AIDE state
   ansible.builtin.include_tasks: facts.yml
 
-- name: audit | Compare with desired state
+# One task per check; each appends a finding (key, expected, actual, fixable) when its check fails.
+- name: audit | Start with no findings
   ansible.builtin.set_fact:
-    __lh_fi_findings: >-
-      {%- set out = [] -%}
-      {%- set timer = __lh_fi_timer['status'] | default({}) -%}
-      {%- if not __lh_fi_installed -%}
-      {%- set _ = out.append({'key': 'package aide', 'expected': 'installed',
-                              'actual': 'missing', 'fixable': true}) -%}
-      {%- else -%}
-      {%- if not __lh_fi_db['stat']['exists'] -%}
-      {%- set _ = out.append({'key': 'baseline database ' ~ __lh_fi_paths['db'], 'expected': 'present',
-                              'actual': 'missing' ~ ('' if linux_hardening_fi_init_database | bool
-                                        else ' (reported only: it records the current state as trusted,'
-                                             ~ ' set linux_hardening_fi_init_database)'),
-                              'fixable': linux_hardening_fi_init_database | bool}) -%}
-      {%- endif -%}
-      {%- for r in __lh_fi_units['results'] | selectattr('changed') -%}
-      {%- set _ = out.append({'key': 'unit /etc/systemd/system/' ~ __lh_fi_unit ~ '.' ~ r['item'],
-                              'expected': 'present with the desired settings',
-                              'actual': 'missing or different', 'fixable': true}) -%}
-      {%- endfor -%}
-      {%- if timer.get('UnitFileState', '') != 'enabled' -%}
-      {%- set _ = out.append({'key': 'timer ' ~ __lh_fi_unit ~ ' enabled', 'expected': 'enabled',
-                              'actual': timer.get('UnitFileState', 'unknown'), 'fixable': true}) -%}
-      {%- endif -%}
-      {%- if timer.get('ActiveState') != 'active' -%}
-      {%- set _ = out.append({'key': 'timer ' ~ __lh_fi_unit ~ ' active', 'expected': 'active',
-                              'actual': timer.get('ActiveState', 'unknown'), 'fixable': true}) -%}
-      {%- endif -%}
-      {%- if __lh_fi_check['rc'] is defined -%}
-      {%- if 1 <= __lh_fi_check['rc'] <= 7 -%}
-      {%- set _ = out.append({'key': 'files match the baseline', 'expected': 'no differences',
-                              'actual': 'aide --check exit ' ~ __lh_fi_check['rc'] ~ ': files differ'
-                                        ~ ' (reported only: review them, then update the baseline yourself)',
-                              'fixable': false}) -%}
-      {%- elif __lh_fi_check['rc'] != 0 -%}
-      {%- set _ = out.append({'key': 'aide --check runs', 'expected': 'exit 0',
-                              'actual': 'exit ' ~ __lh_fi_check['rc'] ~ ' (reported only)', 'fixable': false}) -%}
-      {%- endif -%}
-      {%- endif -%}
-      {%- endif -%}
-      {{ out | to_json }}
+    __lh_fi_findings: []
+
+- name: audit | Report a missing aide package
+  ansible.builtin.set_fact:
+    __lh_fi_findings: "{{ __lh_fi_findings + [__lh_fi_finding] }}"
+  vars:
+    __lh_fi_finding:
+      key: package aide
+      expected: installed
+      actual: missing
+      fixable: true
+  when: not __lh_fi_installed
+
+- name: audit | Check the installed setup
+  when: __lh_fi_installed
+  vars:
+    __lh_fi_timer_status: "{{ __lh_fi_timer['status'] | default({}) }}"
+  block:
+    - name: audit | Report a missing baseline database
+      ansible.builtin.set_fact:
+        __lh_fi_findings: "{{ __lh_fi_findings + [__lh_fi_finding] }}"
+      vars:
+        __lh_fi_finding:
+          key: "baseline database {{ __lh_fi_paths['db'] }}"
+          expected: present
+          actual: >-
+            {{ 'missing' if linux_hardening_fi_init_database | bool
+               else 'missing (reported only: it records the current state as trusted,'
+                    ~ ' set linux_hardening_fi_init_database)' }}
+          fixable: "{{ linux_hardening_fi_init_database | bool }}"
+      when: not __lh_fi_db['stat']['exists']
+
+    - name: audit | Report units that differ from the templates
+      ansible.builtin.set_fact:
+        __lh_fi_findings: "{{ __lh_fi_findings + [__lh_fi_finding] }}"
+      vars:
+        __lh_fi_finding:
+          key: "unit /etc/systemd/system/{{ __lh_fi_unit }}.{{ item['item'] }}"
+          expected: present with the desired settings
+          actual: missing or different
+          fixable: true
+      loop: "{{ __lh_fi_units['results'] | selectattr('changed') }}"
+      loop_control:
+        label: "{{ item['item'] }}"
+
+    - name: audit | Report a timer that is not enabled
+      ansible.builtin.set_fact:
+        __lh_fi_findings: "{{ __lh_fi_findings + [__lh_fi_finding] }}"
+      vars:
+        __lh_fi_finding:
+          key: "timer {{ __lh_fi_unit }} enabled"
+          expected: enabled
+          actual: "{{ __lh_fi_timer_status['UnitFileState'] | default('unknown') }}"
+          fixable: true
+      when: __lh_fi_timer_status['UnitFileState'] | default('') != 'enabled'
+
+    - name: audit | Report a timer that is not active
+      ansible.builtin.set_fact:
+        __lh_fi_findings: "{{ __lh_fi_findings + [__lh_fi_finding] }}"
+      vars:
+        __lh_fi_finding:
+          key: "timer {{ __lh_fi_unit }} active"
+          expected: active
+          actual: "{{ __lh_fi_timer_status['ActiveState'] | default('unknown') }}"
+          fixable: true
+      when: __lh_fi_timer_status['ActiveState'] | default('') != 'active'
+
+    # aide --check exits 1-7 when files differ (a bitmask of added/removed/changed), higher on errors.
+    - name: audit | Report files that differ from the baseline
+      ansible.builtin.set_fact:
+        __lh_fi_findings: "{{ __lh_fi_findings + [__lh_fi_finding] }}"
+      vars:
+        __lh_fi_finding:
+          key: files match the baseline
+          expected: no differences
+          actual: >-
+            aide --check exit {{ __lh_fi_check['rc'] }}: files differ
+            (reported only: review them, then update the baseline yourself)
+          fixable: false
+      when:
+        - __lh_fi_check['rc'] is defined
+        - __lh_fi_check['rc'] in range(1, 8)
+
+    - name: audit | Report an aide --check that did not run cleanly
+      ansible.builtin.set_fact:
+        __lh_fi_findings: "{{ __lh_fi_findings + [__lh_fi_finding] }}"
+      vars:
+        __lh_fi_finding:
+          key: aide --check runs
+          expected: exit 0
+          actual: "exit {{ __lh_fi_check['rc'] }} (reported only)"
+          fixable: false
+      when:
+        - __lh_fi_check['rc'] is defined
+        - __lh_fi_check['rc'] not in range(0, 8)
 
 - name: audit | Record findings
   ansible.builtin.set_fact:
-    linux_hardening_fi_findings: "{{ __lh_fi_findings | from_json }}"
+    linux_hardening_fi_findings: "{{ __lh_fi_findings }}"
 
 - name: audit | Report file_integrity result
   ansible.builtin.debug:
